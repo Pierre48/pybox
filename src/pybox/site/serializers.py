@@ -12,6 +12,7 @@ class SiteSchema(Schema):
 
     @pre_load
     def make_site(self, data, **kwargs):
+        print(data)
         data = data['site']
         # some of the frontends send this like an empty string and some send
         # null

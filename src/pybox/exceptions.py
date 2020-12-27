@@ -7,6 +7,7 @@ def template(data, code=500):
 
 USER_NOT_FOUND = template(['User not found'], code=404)
 SITE_NOT_FOUND = template(['Site not found'], code=404)
+SITE_ALREADY_REGISTERED = template(['Site already registered'], code=422)
 USER_ALREADY_REGISTERED = template(['User already registered'], code=422)
 UNKNOWN_ERROR = template([], code=500)
 ARTICLE_NOT_FOUND = template(['Article not found'], code=404)
@@ -34,6 +35,10 @@ class InvalidUsage(Exception):
     @classmethod
     def site_not_found(cls):
         return cls(**SITE_NOT_FOUND)
+
+    @classmethod
+    def site_already_registered(cls):
+        return cls(**SITE_ALREADY_REGISTERED)
 
     @classmethod
     def user_already_registered(cls):
