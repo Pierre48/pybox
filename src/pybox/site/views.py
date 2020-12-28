@@ -6,6 +6,9 @@ from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, 
 from sqlalchemy.exc import IntegrityError
 from marshmallow import fields
 from datetime import datetime
+
+from sqlalchemy.orm import Session
+
 from pybox.database import db
 from pybox.exceptions import InvalidUsage
 from pybox.profile.models import UserProfile
@@ -53,7 +56,11 @@ def update_site(id, **kwargs):
 @jwt_optional
 def delete_site(id):
     site = Site.query.filter_by(id=id).first()
-    site.delete()
+    if not site:
+        raise InvalidUsage.site_not_found()
+    session = Session.object_session(site)
+    session.delete(site)
+    session.commit()
     return '', 200
 
 

@@ -4,12 +4,14 @@ from flask import Blueprint, request
 from flask_apispec import use_kwargs, marshal_with
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, current_user
 from sqlalchemy.exc import IntegrityError
+from marshmallow import fields
+from sqlalchemy.orm import Session
 
 from pybox.database import db
 from pybox.exceptions import InvalidUsage
 from pybox.profile.models import UserProfile
 from .models import User
-from .serializers import user_schema
+from .serializers import user_schema,users_schema
 
 blueprint = Blueprint('user', __name__)
 
@@ -21,9 +23,12 @@ def register_user(username, password, email, **kwargs):
     try:
         userprofile = UserProfile(User(username, email, password=password, **kwargs).save()).save()
         userprofile.user.token = create_access_token(identity=userprofile.user)
-    except IntegrityError:
+    except IntegrityError as e:
         db.session.rollback()
         raise InvalidUsage.user_already_registered()
+    except Exception as e:
+        db.session.rollback()
+        raise Exception("dsfks")
     return userprofile.user
 
 
@@ -31,8 +36,8 @@ def register_user(username, password, email, **kwargs):
 @jwt_optional
 @use_kwargs(user_schema)
 @marshal_with(user_schema)
-def login_user(email, password, **kwargs):
-    user = User.query.filter_by(email=email).first()
+def login_user(username, password, **kwargs):
+    user = User.query.filter_by(username=username).first()
     if user is not None and user.check_password(password):
         user.token = create_access_token(identity=user, fresh=True)
         return user
@@ -49,6 +54,24 @@ def get_user():
     user.token = request.headers.environ['HTTP_AUTHORIZATION'].split('Token ')[1]
     return current_user
 
+@blueprint.route('/api/users/<id>', methods=('DELETE',))
+@jwt_optional
+def delete_user(id):
+    user = User.query.filter_by(id=id).first()
+    if not user:
+        raise InvalidUsage.user_not_found()
+    session = Session.object_session(user)
+    session.delete(user)
+    session.commit()
+    return '', 200
+
+@blueprint.route('/api/users', methods=('GET',))
+@jwt_optional
+@use_kwargs({'name': fields.Str()})
+@marshal_with(users_schema)
+def get_sites(name=None, limit=20, offset=0):
+    res = User.query
+    return res.offset(offset).limit(limit).all()
 
 @blueprint.route('/api/user', methods=('PUT',))
 @jwt_required
