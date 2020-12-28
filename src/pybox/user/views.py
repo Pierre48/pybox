@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from pybox.database import db
 from pybox.exceptions import InvalidUsage
-from pybox.profile.models import UserProfile
 from .models import User
 from .serializers import user_schema,users_schema
 
@@ -21,15 +20,15 @@ blueprint = Blueprint('user', __name__)
 @marshal_with(user_schema)
 def register_user(username, password, email, **kwargs):
     try:
-        userprofile = UserProfile(User(username, email, password=password, **kwargs).save()).save()
-        userprofile.user.token = create_access_token(identity=userprofile.user)
+        user = User(username, email, password=password, **kwargs).save()
+        user.token = create_access_token(identity=user)
     except IntegrityError as e:
         db.session.rollback()
         raise InvalidUsage.user_already_registered()
     except Exception as e:
         db.session.rollback()
         raise Exception("dsfks")
-    return userprofile.user
+    return user
 
 
 @blueprint.route('/api/users/login', methods=('POST',))
@@ -48,7 +47,7 @@ def login_user(username, password, **kwargs):
 @blueprint.route('/api/user', methods=('GET',))
 @jwt_required
 @marshal_with(user_schema)
-def get_user():
+def get_current_user():
     user = current_user
     # Not sure about this
     user.token = request.headers.environ['HTTP_AUTHORIZATION'].split('Token ')[1]
@@ -65,19 +64,28 @@ def delete_user(id):
     session.commit()
     return '', 200
 
+@blueprint.route('/api/users/<id>', methods=('GET',))
+@jwt_optional
+@marshal_with(user_schema)
+def get_user(id):
+    user = User.query.filter_by(id=id).first()
+    if not user:
+        raise InvalidUsage.user_not_found()
+    return user
+
 @blueprint.route('/api/users', methods=('GET',))
 @jwt_optional
 @use_kwargs({'name': fields.Str()})
 @marshal_with(users_schema)
-def get_sites(name=None, limit=20, offset=0):
+def get_users(name=None, limit=20, offset=0):
     res = User.query
     return res.offset(offset).limit(limit).all()
 
-@blueprint.route('/api/user', methods=('PUT',))
+@blueprint.route('/api/users/<id>', methods=('PUT',))
 @jwt_required
 @use_kwargs(user_schema)
 @marshal_with(user_schema)
-def update_user(**kwargs):
+def update_user(id,**kwargs):
     user = current_user
     # take in consideration the password
     password = kwargs.pop('password', None)

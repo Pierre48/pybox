@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 
 from pybox.database import db
 from pybox.exceptions import InvalidUsage
-from pybox.profile.models import UserProfile
 from .models import Site
 from .serializers import site_schema,sites_schema
 

@@ -60,7 +60,6 @@ def register_shellcontext(app):
         return {
             'db': db,
             'User': user.models.User,
-            'UserProfile': profile.models.UserProfile,
             'Site': site.models.Site
         }
 
